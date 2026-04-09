@@ -20,21 +20,24 @@ export function liveDesign(config?: LiveDesignConfig): Plugin {
   const themeVariables = config?.themeVariables ?? [];
 
   let overlayDir: string;
+  let base: string;
 
   return {
     name: "live-design",
     apply: "serve",
 
-    configResolved() {
+    configResolved(resolvedConfig) {
       overlayDir = resolveOverlayDir();
+      base = resolvedConfig.base ?? "/";
     },
 
     transformIndexHtml: {
       order: "post",
       handler(html) {
+        const prefix = base.endsWith("/") ? base.slice(0, -1) : base;
         const bootstrap = `
 (function() {
-  import('/@live-design/overlay.js');
+  import('${prefix}/@live-design/overlay.js');
 })();`;
 
         // Inject after @react-refresh preamble if present, otherwise append before </body>
@@ -57,9 +60,15 @@ export function liveDesign(config?: LiveDesignConfig): Plugin {
 
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (!req.url?.startsWith("/@live-design/")) return next();
+        // Match /@live-design/* with or without base prefix
+        const prefix = base.endsWith("/") ? base.slice(0, -1) : base;
+        let url = req.url ?? "";
+        if (url.startsWith(`${prefix}/@live-design/`)) {
+          url = url.slice(prefix.length);
+        }
+        if (!url.startsWith("/@live-design/")) return next();
 
-        const filename = req.url.slice("/@live-design/".length);
+        const filename = url.slice("/@live-design/".length);
 
         // Virtual config module
         if (filename === "config.js") {
@@ -74,16 +83,24 @@ export function liveDesign(config?: LiveDesignConfig): Plugin {
         if (filename.endsWith(".js")) {
           try {
             let content = readFileSync(join(overlayDir, filename), "utf-8");
-            // Rewrite relative imports to absolute /@live-design/ paths
+            // Rewrite relative imports to absolute /@live-design/ paths (with base prefix)
             content = content.replace(
               /from\s+["']\.\/([^"']+)["']/g,
-              'from "/@live-design/$1"'
+              `from "${prefix}/@live-design/$1"`
             );
-            // Inline the shared constants instead of importing them
+            // Remove @live-design/shared imports (types are already stripped by tsc)
             content = content.replace(
               /import\s*\{[^}]*\}\s*from\s*["']@live-design\/shared["'];?\n?/g,
-              `const DEFAULT_PORT = ${DEFAULT_PORT};\n`
+              ""
             );
+            // Append shared constants after all imports
+            const lastImportIdx = content.lastIndexOf("\nimport ");
+            if (lastImportIdx !== -1) {
+              const lineEnd = content.indexOf("\n", lastImportIdx + 1);
+              content = content.slice(0, lineEnd + 1) + `const DEFAULT_PORT = ${DEFAULT_PORT};\n` + content.slice(lineEnd + 1);
+            } else {
+              content = `const DEFAULT_PORT = ${DEFAULT_PORT};\n` + content;
+            }
             res.setHeader("Content-Type", "application/javascript");
             res.setHeader("Cache-Control", "no-cache");
             res.end(content);

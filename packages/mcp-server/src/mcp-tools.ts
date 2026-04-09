@@ -2,17 +2,12 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SessionManager } from "./session.js";
 import type { WebSocketBridge } from "./ws-bridge.js";
-import { startProxy, spawnDevServer, type ProxyHandle } from "./proxy.js";
+import { spawnDevServer } from "./proxy.js";
 import type { ChildProcess } from "node:child_process";
 
-let activeProxy: ProxyHandle | null = null;
 let activeDevServer: ChildProcess | null = null;
 
 function cleanup(): void {
-  if (activeProxy) {
-    activeProxy.close();
-    activeProxy = null;
-  }
   if (activeDevServer) {
     activeDevServer.kill();
     activeDevServer = null;
@@ -27,14 +22,13 @@ export function registerTools(
   mcp: McpServer,
   session: SessionManager,
   bridge: WebSocketBridge,
-  overlayDir: string,
 ): void {
   mcp.tool(
     "start_session",
-    "Starts an HTML-injecting proxy in front of the user's dev server and begins a review session. " +
-      "Provide either 'target' (URL of a running dev server) or 'command' (shell command to start one). " +
-      "The designer opens the proxy URL to see the app with the live-design overlay injected. " +
-      "No changes to the user's codebase are needed.",
+    "Starts a dev server and begins a review session. The target app must use the " +
+      "@live-design/vite-plugin to inject the overlay. Provide either 'target' (URL of a " +
+      "running dev server) or 'command' (shell command to start one). The designer opens " +
+      "the dev server URL to see the app with the live-design overlay.",
     {
       target: z
         .string()
@@ -52,25 +46,12 @@ export function registerTools(
         .string()
         .optional()
         .describe("Working directory for the command (defaults to project root)"),
-      port: z
-        .number()
-        .optional()
-        .describe("Proxy port (default 24680)"),
       message: z
         .string()
         .optional()
         .describe("Message shown to the designer when the session starts"),
-      author: z
-        .string()
-        .optional()
-        .describe("Default author name for comments"),
-      theme_variables: z
-        .array(z.string())
-        .optional()
-        .describe("CSS variable names to expose in the theme panel"),
     },
-    async ({ target, command, cwd, port, message, author, theme_variables }) => {
-      // Validate: need exactly one of target or command
+    async ({ target, command, cwd, message }) => {
       if (!target && !command) {
         return {
           content: [{ type: "text" as const, text: "Error: provide either 'target' (URL) or 'command' (shell command), not neither." }],
@@ -87,13 +68,12 @@ export function registerTools(
       // Clean up any previous session
       cleanup();
 
-      // If command provided, spawn the dev server and detect URL
-      let resolvedTarget = target!;
+      let devServerUrl = target!;
       if (command) {
         try {
           const result = await spawnDevServer(command, cwd);
           activeDevServer = result.process;
-          resolvedTarget = result.url;
+          devServerUrl = result.url;
         } catch (err) {
           return {
             content: [{
@@ -105,19 +85,8 @@ export function registerTools(
         }
       }
 
-      // Start the proxy
-      activeProxy = startProxy({
-        target: resolvedTarget,
-        port,
-        overlayDir,
-        author,
-        themeVariables: theme_variables,
-      });
-
-      // Start or reuse the current review session
       session.startSession();
 
-      // If a message was provided, broadcast it to connected browsers
       if (message) {
         bridge.broadcast({
           type: "session:state",
@@ -127,8 +96,8 @@ export function registerTools(
       }
 
       const info = command
-        ? `Started dev server (detected at ${resolvedTarget}), proxy at ${activeProxy.url}`
-        : `Proxy started at ${activeProxy.url} → ${resolvedTarget}`;
+        ? `Started dev server at ${devServerUrl}`
+        : `Using existing dev server at ${devServerUrl}`;
 
       return {
         content: [
@@ -136,9 +105,8 @@ export function registerTools(
             type: "text" as const,
             text: JSON.stringify(
               {
-                proxy_url: activeProxy.url,
-                dev_server_url: resolvedTarget,
-                message: `Designer should open ${activeProxy.url} to begin reviewing`,
+                url: devServerUrl,
+                message: `Designer should open ${devServerUrl} to begin reviewing`,
                 info,
               },
               null,
@@ -152,7 +120,7 @@ export function registerTools(
 
   mcp.tool(
     "stop_session",
-    "Stops the HTML-injecting proxy and resets the review session.",
+    "Stops the dev server (if started by start_session) and resets the review session.",
     {},
     async () => {
       cleanup();
@@ -163,7 +131,7 @@ export function registerTools(
             type: "text" as const,
             text: JSON.stringify({
               status: "stopped",
-              message: "Proxy and dev server stopped, session reset",
+              message: "Session stopped",
             }),
           },
         ],

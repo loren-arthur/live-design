@@ -12,7 +12,6 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@live-design/overlay": "*",
     "@live-design/shared": "*",
     "@modelcontextprotocol/sdk": "^1.12.1",
     "ws": "^8.18.0"
