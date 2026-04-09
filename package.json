@@ -1,0 +1,8 @@
+{
+  "name": "live-design",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "example"
+  ]
+}
