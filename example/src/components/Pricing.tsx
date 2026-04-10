@@ -1,3 +1,5 @@
+import { Badge, Box, Button, Card, Container, Flex, Heading, Section, Text } from "@radix-ui/themes";
+
 interface PlanProps {
   name: string;
   price: string;
@@ -10,191 +12,43 @@ interface PlanProps {
 
 function PlanCard({ name, price, period, description, features, cta, highlighted }: PlanProps) {
   return (
-    <div
-      style={{
-        flex: "1 1 20rem",
-        maxWidth: "28rem",
-        padding: "2.5rem",
-        borderRadius: "var(--brand-radius)",
-        border: highlighted
-          ? "2px solid var(--brand-primary)"
-          : "1px solid var(--brand-border)",
-        background: highlighted
-          ? "linear-gradient(180deg, rgba(99, 102, 241, 0.03) 0%, var(--brand-bg) 100%)"
-          : "var(--brand-bg)",
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        boxShadow: highlighted
-          ? "0 8px 32px rgba(99, 102, 241, 0.12)"
-          : "0 1px 4px rgba(0, 0, 0, 0.04)",
-      }}
-    >
+    <Card size="4" variant={highlighted ? "classic" : "surface"} style={{ flex: "1 1 18rem", maxWidth: "24rem", position: "relative" }}>
       {highlighted && (
-        <span
-          style={{
-            position: "absolute",
-            top: "-0.75rem",
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "var(--brand-primary)",
-            color: "#fff",
-            fontSize: "0.75rem",
-            fontWeight: 600,
-            padding: "0.25rem 1rem",
-            borderRadius: "999px",
-            letterSpacing: "0.03em",
-          }}
-        >
-          Most Popular
-        </span>
+        <Box style={{ position: "absolute", top: "-0.75rem", left: "50%", transform: "translateX(-50%)" }}>
+          <Badge color="indigo" size="2">Most Popular</Badge>
+        </Box>
       )}
-      <h3
-        style={{
-          fontSize: "1.25rem",
-          fontWeight: 600,
-          color: "var(--brand-text)",
-          marginBottom: "0.5rem",
-        }}
-      >
-        {name}
-      </h3>
-      <p
-        style={{
-          fontSize: "0.9375rem",
-          color: "var(--brand-text-muted)",
-          marginBottom: "1.5rem",
-          lineHeight: 1.5,
-        }}
-      >
-        {description}
-      </p>
-      <div style={{ marginBottom: "2rem" }}>
-        <span
-          style={{
-            fontSize: "3rem",
-            fontWeight: 700,
-            color: "var(--brand-text)",
-            letterSpacing: "-0.03em",
-            lineHeight: 1,
-          }}
-        >
-          {price}
-        </span>
-        <span
-          style={{
-            fontSize: "1rem",
-            color: "var(--brand-text-muted)",
-            marginLeft: "0.25rem",
-          }}
-        >
-          {period}
-        </span>
-      </div>
-      <ul
-        style={{
-          listStyle: "none",
-          padding: 0,
-          margin: "0 0 2rem",
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.75rem",
-        }}
-      >
+      <Heading size="5" mb="1">{name}</Heading>
+      <Text size="2" color="gray" mb="4" as="p">{description}</Text>
+      <Flex align="baseline" gap="1" mb="5">
+        <Text size="9" weight="bold">{price}</Text>
+        <Text size="2" color="gray">{period}</Text>
+      </Flex>
+      <Flex direction="column" gap="2" mb="5">
         {features.map((feature) => (
-          <li
-            key={feature}
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "0.625rem",
-              fontSize: "0.9375rem",
-              color: "var(--brand-text)",
-              lineHeight: 1.5,
-            }}
-          >
-            <span
-              style={{
-                color: "var(--brand-primary)",
-                fontWeight: 700,
-                flexShrink: 0,
-                marginTop: "0.125rem",
-              }}
-            >
-              {"\u2713"}
-            </span>
-            {feature}
-          </li>
+          <Flex key={feature} gap="2" align="start">
+            <Text color="indigo" weight="bold">✓</Text>
+            <Text size="2">{feature}</Text>
+          </Flex>
         ))}
-      </ul>
-      <button
-        className={highlighted ? "btn btn-primary" : "btn btn-secondary"}
-        style={{ width: "100%" }}
-      >
-        {cta}
-      </button>
-    </div>
+      </Flex>
+      <Button size="3" variant={highlighted ? "solid" : "soft"} style={{ width: "100%" }}>{cta}</Button>
+    </Card>
   );
 }
 
-const styles = {
-  section: {
-    padding: "6rem 1.5rem",
-    maxWidth: "72rem",
-    margin: "0 auto",
-    background: "var(--brand-bg-alt)",
-  },
-  wrapper: {
-    maxWidth: "72rem",
-    margin: "0 auto",
-    padding: "0 1.5rem",
-  },
-  header: {
-    textAlign: "center" as const,
-    marginBottom: "4rem",
-  },
-  label: {
-    fontSize: "0.875rem",
-    fontWeight: 600,
-    color: "var(--brand-primary)",
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.08em",
-    marginBottom: "0.75rem",
-  },
-  title: {
-    fontSize: "2.25rem",
-    fontWeight: 700,
-    color: "var(--brand-text)",
-    marginBottom: "1rem",
-    letterSpacing: "-0.025em",
-  },
-  description: {
-    fontSize: "1.125rem",
-    color: "var(--brand-text-muted)",
-    maxWidth: "32rem",
-    margin: "0 auto",
-  },
-  cards: {
-    display: "flex",
-    gap: "2rem",
-    justifyContent: "center",
-    flexWrap: "wrap" as const,
-  },
-} as const;
-
 export default function Pricing() {
   return (
-    <section id="pricing" style={styles.section}>
-      <div style={styles.wrapper}>
-        <div style={styles.header}>
-          <p style={styles.label}>Pricing</p>
-          <h2 style={styles.title}>Start free, scale when ready</h2>
-          <p style={styles.description}>
-            No credit card required. Upgrade when your team needs more.
-          </p>
-        </div>
-        <div style={styles.cards}>
+    <Section size="4" id="pricing" style={{ background: "var(--gray-2)" }}>
+      <Container size="4">
+        <Box mb="7" style={{ textAlign: "center" }}>
+          <Text size="2" weight="bold" color="indigo" style={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            Pricing
+          </Text>
+          <Heading size="8" mt="2" mb="3">Start free, scale when ready</Heading>
+          <Text size="4" color="gray">No credit card required. Upgrade when your team needs more.</Text>
+        </Box>
+        <Flex gap="5" wrap="wrap" justify="center">
           <PlanCard
             name="Free"
             price="$0"
@@ -226,8 +80,8 @@ export default function Pricing() {
             cta="Start Free Trial"
             highlighted
           />
-        </div>
-      </div>
-    </section>
+        </Flex>
+      </Container>
+    </Section>
   );
 }

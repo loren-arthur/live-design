@@ -310,28 +310,121 @@ export function createStyleSheet(): HTMLStyleElement {
       padding: 24px 0;
     }
 
-    /* ── Theme panel ── */
+    /* ── Radix theme panel ── */
 
-    .ld-theme-var {
+    .ld-radix-body {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
+      flex-direction: column;
+      gap: 14px;
     }
 
-    .ld-theme-var label {
-      flex: 1;
+    .ld-radix-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .ld-radix-label {
       font-size: 11px;
+      font-weight: 600;
       color: #aaa;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
-    .ld-theme-var input[type="color"] {
+    .ld-radix-accent-grid {
+      display: grid;
+      grid-template-columns: repeat(13, 1fr);
+      gap: 4px;
+    }
+
+    .ld-radix-swatch {
       pointer-events: auto;
-      width: 28px;
+      width: 100%;
+      aspect-ratio: 1;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      cursor: pointer;
+      padding: 0;
+      transition: transform 0.1s ease, border-color 0.1s ease;
+    }
+
+    .ld-radix-swatch:hover {
+      transform: scale(1.15);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .ld-radix-swatch.active {
+      border-color: #fff;
+      border-width: 2px;
+    }
+
+    .ld-radix-select {
+      pointer-events: auto;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 4px;
+      color: #e0e0e0;
+      padding: 5px 8px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .ld-radix-select:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    .ld-radix-toggle {
+      display: flex;
+      gap: 4px;
+    }
+
+    .ld-radix-toggle-btn {
+      pointer-events: auto;
+      flex: 1;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 4px;
+      color: #aaa;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      text-transform: capitalize;
+      transition: background 0.1s, color 0.1s;
+    }
+
+    .ld-radix-toggle-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ddd;
+    }
+
+    .ld-radix-toggle-btn.active {
+      background: #3b82f6;
+      border-color: #2563eb;
+      color: #fff;
+    }
+
+    .ld-theme-reset {
+      margin-top: 14px;
+    }
+
+    .ld-radix-divider {
+      font-size: 11px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding-top: 12px;
+      margin-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .ld-radix-color-input {
+      pointer-events: auto;
+      width: 36px;
       height: 28px;
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 4px;
@@ -340,34 +433,27 @@ export function createStyleSheet(): HTMLStyleElement {
       padding: 1px;
     }
 
-    .ld-theme-var input[type="text"],
-    .ld-theme-var input[type="range"] {
+    .ld-radix-range {
       pointer-events: auto;
-      width: 80px;
+      width: 100%;
+      accent-color: #3b82f6;
+    }
+
+    .ld-radix-text-input {
+      pointer-events: auto;
+      width: 100%;
       background: rgba(255, 255, 255, 0.06);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 4px;
       color: #e0e0e0;
-      padding: 4px 6px;
-      font-size: 11px;
+      padding: 5px 8px;
+      font-size: 12px;
       font-family: inherit;
     }
 
-    .ld-theme-var input[type="text"]:focus {
+    .ld-radix-text-input:focus {
       outline: none;
       border-color: #3b82f6;
-    }
-
-    .ld-color-swatch {
-      width: 14px;
-      height: 14px;
-      border-radius: 3px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      flex-shrink: 0;
-    }
-
-    .ld-theme-reset {
-      margin-top: 12px;
     }
 
     /* ── Selector highlight ── */
@@ -523,301 +609,6 @@ export function createStyleSheet(): HTMLStyleElement {
 
     .ld-toast.dismissing {
       animation: ld-slide-out 0.3s ease forwards;
-    }
-
-    /* ── Element Inspector ── */
-
-    .inspector-panel {
-      pointer-events: none;
-      position: fixed;
-      top: 0;
-      right: 0;
-      width: 320px;
-      height: 100%;
-      background: rgba(15, 15, 15, 0.92);
-      border-left: 1px solid rgba(255, 255, 255, 0.1);
-      overflow-y: auto;
-      transform: translateX(100%);
-      transition: transform 0.25s ease;
-      padding: 0;
-      z-index: 999999;
-    }
-
-    .inspector-panel.open {
-      pointer-events: auto;
-      transform: translateX(0);
-    }
-
-    .inspector-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      padding: 14px 16px 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .inspector-header-name {
-      font-size: 14px;
-      font-weight: 600;
-      color: #fff;
-    }
-
-    .inspector-header-loc {
-      font-size: 11px;
-      color: #888;
-      margin-top: 2px;
-    }
-
-    .inspector-body {
-      padding: 0 16px 16px;
-    }
-
-    .inspector-section {
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-      padding-bottom: 8px;
-      margin-bottom: 4px;
-    }
-
-    .inspector-section:last-child {
-      border-bottom: none;
-    }
-
-    .inspector-section-title {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 10px 0 6px;
-      cursor: pointer;
-      font-size: 11px;
-      font-weight: 600;
-      color: #aaa;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      user-select: none;
-    }
-
-    .inspector-section-title:hover {
-      color: #ccc;
-    }
-
-    .inspector-arrow {
-      font-size: 10px;
-      width: 12px;
-      text-align: center;
-      color: #666;
-    }
-
-    .inspector-section-body {
-      /* no extra styling needed, just a wrapper */
-    }
-
-    /* ── Class tags ── */
-
-    .class-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      margin-bottom: 8px;
-    }
-
-    .class-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-      padding: 2px 6px;
-      background: rgba(59, 130, 246, 0.15);
-      border: 1px solid rgba(59, 130, 246, 0.25);
-      border-radius: 4px;
-      font-size: 11px;
-      color: #93b4f5;
-      animation: ld-fade-in 0.15s ease;
-    }
-
-    @keyframes ld-fade-in {
-      from { opacity: 0; transform: scale(0.9); }
-      to { opacity: 1; transform: scale(1); }
-    }
-
-    .class-tag-remove {
-      pointer-events: auto;
-      background: transparent;
-      border: none;
-      color: #6b8fd4;
-      font-size: 12px;
-      cursor: pointer;
-      padding: 0 1px;
-      line-height: 1;
-      border-radius: 2px;
-      font-family: inherit;
-    }
-
-    .class-tag-remove:hover {
-      color: #ef4444;
-      background: rgba(239, 68, 68, 0.15);
-    }
-
-    /* ── Class add ── */
-
-    .class-add {
-      position: relative;
-      margin-top: 4px;
-    }
-
-    .class-add-btn {
-      font-size: 13px;
-      padding: 2px 10px;
-    }
-
-    .class-search-wrap {
-      margin-top: 6px;
-    }
-
-    .class-search {
-      pointer-events: auto;
-      width: 100%;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 4px;
-      color: #e0e0e0;
-      padding: 6px 8px;
-      font-size: 12px;
-      font-family: inherit;
-    }
-
-    .class-search:focus {
-      outline: none;
-      border-color: #3b82f6;
-    }
-
-    .class-dropdown {
-      margin-top: 4px;
-      max-height: 200px;
-      overflow-y: auto;
-      background: rgba(20, 20, 20, 0.98);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 6px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-    }
-
-    .class-dropdown-item {
-      pointer-events: auto;
-      padding: 6px 10px;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-      transition: background 0.1s;
-    }
-
-    .class-dropdown-item:last-child {
-      border-bottom: none;
-    }
-
-    .class-dropdown-item:hover {
-      background: rgba(59, 130, 246, 0.12);
-    }
-
-    .class-dropdown-item.class-dropdown-empty {
-      color: #666;
-      font-size: 11px;
-      cursor: default;
-    }
-
-    .class-dropdown-item.class-dropdown-empty:hover {
-      background: transparent;
-    }
-
-    .class-dropdown-name {
-      font-size: 12px;
-      color: #e0e0e0;
-    }
-
-    .class-dropdown-props {
-      font-size: 10px;
-      color: #666;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    /* ── Style rows ── */
-
-    .style-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 6px;
-      min-height: 26px;
-    }
-
-    .style-label {
-      flex: 0 0 100px;
-      font-size: 11px;
-      color: #888;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .style-value {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      min-width: 0;
-    }
-
-    .style-color-swatch {
-      width: 16px;
-      height: 16px;
-      border-radius: 3px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      flex-shrink: 0;
-    }
-
-    .style-color-input {
-      pointer-events: auto;
-      width: 28px;
-      height: 24px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 4px;
-      background: transparent;
-      cursor: pointer;
-      padding: 1px;
-      flex-shrink: 0;
-    }
-
-    .style-slider {
-      pointer-events: auto;
-      width: 80px;
-      flex-shrink: 0;
-      accent-color: #3b82f6;
-    }
-
-    .style-text-input {
-      pointer-events: auto;
-      flex: 1;
-      min-width: 0;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 4px;
-      color: #e0e0e0;
-      padding: 3px 6px;
-      font-size: 11px;
-      font-family: inherit;
-    }
-
-    .style-text-input:focus {
-      outline: none;
-      border-color: #3b82f6;
-    }
-
-    .style-text-input:disabled,
-    .style-color-input:disabled,
-    .style-slider:disabled {
-      opacity: 0.4;
-      cursor: default;
     }
   `;
   return style;

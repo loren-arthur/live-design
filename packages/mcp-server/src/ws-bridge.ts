@@ -58,20 +58,6 @@ export class WebSocketBridge {
         break;
       }
 
-      case "element:change": {
-        const change = this.session.recordElementChange(msg.change);
-        this.broadcast({ type: "element:changed", change });
-        break;
-      }
-
-      case "element:reset": {
-        const removed = this.session.removeElementChange(msg.changeId);
-        if (removed) {
-          this.broadcast({ type: "element:reset", changeId: msg.changeId });
-        }
-        break;
-      }
-
       case "review:submit": {
         const result = this.session.submitReview(msg.feedback, msg.author);
         if (result) {

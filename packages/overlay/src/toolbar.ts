@@ -4,15 +4,14 @@ export interface Toolbar {
   setSelectActive(active: boolean): void;
   setThemeActive(active: boolean): void;
   setCommentsActive(active: boolean): void;
-  setInspectorActive(active: boolean): void;
   setFrozen(frozen: boolean): void;
 }
 
 export interface ToolbarCallbacks {
+  showTheme?: boolean;
   onSelectToggle(): void;
   onThemeToggle(): void;
   onCommentsToggle(): void;
-  onInspectorToggle(): void;
   onSubmit(): void;
 }
 
@@ -25,21 +24,15 @@ export function createToolbar(
 
   // Select mode button
   const selectBtn = document.createElement("button");
-  selectBtn.title = "Toggle component selector (Cmd/Ctrl + click)";
+  selectBtn.title = "Toggle component selector";
   selectBtn.textContent = "\ud83c\udfaf Select";
   selectBtn.addEventListener("click", callbacks.onSelectToggle);
 
-  // Theme button
+  // Theme button (only when showTheme is true)
   const themeBtn = document.createElement("button");
   themeBtn.title = "Toggle theme editor";
   themeBtn.textContent = "\ud83c\udfa8 Theme";
   themeBtn.addEventListener("click", callbacks.onThemeToggle);
-
-  // Inspector button
-  const inspectorBtn = document.createElement("button");
-  inspectorBtn.title = "Toggle element inspector";
-  inspectorBtn.textContent = "\ud83d\udd0d Inspector";
-  inspectorBtn.addEventListener("click", callbacks.onInspectorToggle);
 
   // Comments button
   const commentsBtn = document.createElement("button");
@@ -71,8 +64,7 @@ export function createToolbar(
   frozenLabel.appendChild(document.createTextNode(" Agent working..."));
 
   bar.appendChild(selectBtn);
-  bar.appendChild(themeBtn);
-  bar.appendChild(inspectorBtn);
+  if (callbacks.showTheme) bar.appendChild(themeBtn);
   bar.appendChild(commentsBtn);
   bar.appendChild(submitBtn);
   bar.appendChild(frozenLabel);
@@ -100,16 +92,11 @@ export function createToolbar(
     commentsBtn.classList.toggle("active", active);
   }
 
-  function setInspectorActive(active: boolean): void {
-    inspectorBtn.classList.toggle("active", active);
-  }
-
   function setFrozen(frozen: boolean): void {
     bar.classList.toggle("frozen", frozen);
 
     selectBtn.disabled = frozen;
     themeBtn.disabled = frozen;
-    inspectorBtn.disabled = frozen;
     commentsBtn.disabled = frozen;
     submitBtn.disabled = frozen;
 
@@ -122,7 +109,6 @@ export function createToolbar(
     setSelectActive,
     setThemeActive,
     setCommentsActive,
-    setInspectorActive,
     setFrozen,
   };
 }

@@ -7,7 +7,6 @@ export interface ReviewSession {
   state: SessionState;
   comments: Comment[];
   themeChanges: ThemeChange[];
-  elementChanges: ElementChange[];
   feedback: string | null;
   startedAt: number;
   submittedAt: number | null;
@@ -38,23 +37,6 @@ export interface ThemeChange {
   newValue: string;
 }
 
-// ── Element changes ──
-
-export interface StyleChange {
-  property: string;
-  oldValue: string;
-  newValue: string;
-}
-
-export interface ElementChange {
-  id: string;
-  location: SourceLocation;
-  classesAdded: string[];
-  classesRemoved: string[];
-  styleChanges: StyleChange[];
-  timestamp: number;
-}
-
 // ── WebSocket messages: Browser → Server ──
 
 export type BrowserMessage =
@@ -62,8 +44,6 @@ export type BrowserMessage =
   | { type: "comment:remove"; commentId: string }
   | { type: "theme:change"; variable: string; value: string }
   | { type: "theme:reset" }
-  | { type: "element:change"; change: Omit<ElementChange, "id" | "timestamp"> }
-  | { type: "element:reset"; changeId: string }
   | { type: "review:submit"; feedback: string; author: string }
   | { type: "session:ping" };
 
@@ -76,8 +56,6 @@ export type ServerMessage =
   | { type: "comment:removed"; commentId: string }
   | { type: "theme:applied"; variable: string; value: string }
   | { type: "theme:cleared" }
-  | { type: "element:changed"; change: ElementChange }
-  | { type: "element:reset"; changeId: string }
   | { type: "review:received" }
   | { type: "feedback:requested"; message: string };
 
@@ -87,7 +65,6 @@ export interface ReviewResult {
   sessionId: string;
   comments: Comment[];
   themeChanges: ThemeChange[];
-  elementChanges: ElementChange[];
   feedback: string;
   author: string;
   submittedAt: number;
@@ -103,10 +80,10 @@ export interface FeedbackRequest {
 export interface LiveDesignConfig {
   /** WebSocket port for browser ↔ server bridge */
   port?: number;
-  /** Theme CSS variables to expose in the panel */
-  themeVariables?: string[];
   /** Author name shown on comments */
   author?: string;
+  /** Custom CSS variables to expose in the theme panel alongside Radix props */
+  themeVariables?: string[];
 }
 
 export const DEFAULT_PORT = 24678;

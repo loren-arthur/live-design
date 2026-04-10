@@ -4,9 +4,7 @@ import { WsClient } from "./ws-client.js";
 import { createStyleSheet } from "./styles.js";
 import { initSelector } from "./component-selector.js";
 import { createCommentPanel } from "./comment-panel.js";
-import { createThemePanel } from "./theme-panel.js";
-import { createElementInspector } from "./element-inspector.js";
-import { createStylesheetIndex } from "./stylesheet-index.js";
+import { createThemePanel, findRadixRoot } from "./theme-panel.js";
 import { createToolbar } from "./toolbar.js";
 import { createSubmitDialog } from "./submit-dialog.js";
 import { createFreezeController } from "./freeze.js";
@@ -46,14 +44,16 @@ async function init(): Promise<void> {
   // WebSocket client
   const ws = new WsClient(port);
 
+  // Detect Radix Themes — only show the Theme button if found
+  const hasRadix = findRadixRoot() !== null;
+
   // Freeze controller
   let frozen = false;
   const freezeCtl = createFreezeController(shadowRoot, (isFrozen) => {
     frozen = isFrozen;
     toolbar.setFrozen(isFrozen);
     commentPanel.setEnabled(!isFrozen);
-    themePanel.setEnabled(!isFrozen);
-    inspector.setEnabled(!isFrozen);
+    if (themePanel) themePanel.setEnabled(!isFrozen);
   });
 
   // Comment panel
@@ -61,12 +61,8 @@ async function init(): Promise<void> {
     toolbar.setCommentCount(count);
   });
 
-  // Theme panel
-  const themePanel = createThemePanel(shadowRoot, ws, config.themeVariables);
-
-  // Stylesheet index + element inspector
-  const stylesheetIndex = createStylesheetIndex();
-  const inspector = createElementInspector(shadowRoot, ws, stylesheetIndex);
+  // Theme panel (only when Radix is detected)
+  const themePanel = hasRadix ? createThemePanel(shadowRoot, ws, config.themeVariables) : null;
 
   // Submit dialog
   const submitDialog = createSubmitDialog(shadowRoot, ws, author);
@@ -81,43 +77,31 @@ async function init(): Promise<void> {
 
   // Toolbar
   const toolbar = createToolbar(shadowRoot, {
+    showTheme: hasRadix,
     onSelectToggle() {
       if (frozen) return;
       const active = selector.toggle();
       toolbar.setSelectActive(active);
     },
     onThemeToggle() {
-      if (frozen) return;
+      if (frozen || !themePanel) return;
       commentPanel.close();
-      inspector.close();
       const active = themePanel.toggle();
       toolbar.setThemeActive(active);
-      toolbar.setCommentsActive(false);
-      toolbar.setInspectorActive(false);
-    },
-    onInspectorToggle() {
-      if (frozen) return;
-      themePanel.close();
-      commentPanel.close();
-      const active = inspector.toggle();
-      toolbar.setInspectorActive(active);
-      toolbar.setThemeActive(false);
       toolbar.setCommentsActive(false);
     },
     onCommentsToggle() {
       if (frozen) return;
-      themePanel.close();
-      inspector.close();
+      if (themePanel) themePanel.close();
       const active = commentPanel.toggle();
       toolbar.setCommentsActive(active);
       toolbar.setThemeActive(false);
-      toolbar.setInspectorActive(false);
     },
     onSubmit() {
       if (frozen) return;
       submitDialog.open(
         commentPanel.getCount(),
-        themePanel.getChangeCount()
+        themePanel?.getChangeCount() ?? 0
       );
     },
   });
@@ -150,12 +134,10 @@ async function init(): Promise<void> {
     if (e.key === "Escape") {
       commentPanel.close();
       commentPanel.hidePopover();
-      themePanel.close();
-      inspector.close();
+      if (themePanel) themePanel.close();
       submitDialog.close();
       toolbar.setThemeActive(false);
       toolbar.setCommentsActive(false);
-      toolbar.setInspectorActive(false);
     }
   });
 }

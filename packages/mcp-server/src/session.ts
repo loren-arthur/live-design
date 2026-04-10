@@ -2,8 +2,6 @@ import { randomUUID } from "node:crypto";
 import type {
   ReviewSession,
   Comment,
-  ThemeChange,
-  ElementChange,
   ReviewResult,
   SessionState,
 } from "@live-design/shared";
@@ -27,7 +25,6 @@ export class SessionManager {
       state: "reviewing",
       comments: [],
       themeChanges: [],
-      elementChanges: [],
       feedback: null,
       startedAt: Date.now(),
       submittedAt: null,
@@ -86,41 +83,6 @@ export class SessionManager {
     this.session.themeChanges = [];
   }
 
-  recordElementChange(change: Omit<ElementChange, "id" | "timestamp">): ElementChange {
-    if (!this.session) {
-      this.startSession();
-    }
-
-    const full: ElementChange = {
-      ...change,
-      id: randomUUID(),
-      timestamp: Date.now(),
-    };
-
-    // Merge with existing change for the same component+location
-    const existing = this.session!.elementChanges.findIndex(
-      (ec) =>
-        ec.location.file === full.location.file &&
-        ec.location.line === full.location.line,
-    );
-
-    if (existing !== -1) {
-      this.session!.elementChanges[existing] = full;
-    } else {
-      this.session!.elementChanges.push(full);
-    }
-
-    return full;
-  }
-
-  removeElementChange(id: string): boolean {
-    if (!this.session) return false;
-    const idx = this.session.elementChanges.findIndex((ec) => ec.id === id);
-    if (idx === -1) return false;
-    this.session.elementChanges.splice(idx, 1);
-    return true;
-  }
-
   submitReview(feedback: string, author: string): ReviewResult | null {
     if (!this.session) return null;
 
@@ -133,7 +95,6 @@ export class SessionManager {
       sessionId: this.session.id,
       comments: [...this.session.comments],
       themeChanges: [...this.session.themeChanges],
-      elementChanges: [...this.session.elementChanges],
       feedback,
       author,
       submittedAt: this.session.submittedAt,
@@ -182,7 +143,6 @@ export class SessionManager {
         sessionId: this.session!.id,
         comments: [...this.session!.comments],
         themeChanges: [...this.session!.themeChanges],
-        elementChanges: [...this.session!.elementChanges],
         feedback: this.session!.feedback,
         author: this.lastAuthor,
         submittedAt: this.session!.submittedAt,
