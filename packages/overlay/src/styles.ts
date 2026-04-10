@@ -7,10 +7,10 @@ export function createStyleSheet(): HTMLStyleElement {
       position: fixed;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
+      width: 0;
+      height: 0;
+      overflow: visible;
       z-index: 999999;
-      pointer-events: none;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       font-size: 13px;
       color: #e0e0e0;
@@ -113,7 +113,7 @@ export function createStyleSheet(): HTMLStyleElement {
     /* ── Panels (shared) ── */
 
     .ld-panel {
-      pointer-events: auto;
+      pointer-events: none;
       position: fixed;
       top: 0;
       right: 0;
@@ -128,6 +128,7 @@ export function createStyleSheet(): HTMLStyleElement {
     }
 
     .ld-panel.open {
+      pointer-events: auto;
       transform: translateX(0);
     }
 
@@ -527,7 +528,7 @@ export function createStyleSheet(): HTMLStyleElement {
     /* ── Element Inspector ── */
 
     .inspector-panel {
-      pointer-events: auto;
+      pointer-events: none;
       position: fixed;
       top: 0;
       right: 0;
@@ -543,6 +544,7 @@ export function createStyleSheet(): HTMLStyleElement {
     }
 
     .inspector-panel.open {
+      pointer-events: auto;
       transform: translateX(0);
     }
 

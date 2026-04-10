@@ -34,10 +34,10 @@ async function init(): Promise<void> {
   host.style.position = "fixed";
   host.style.top = "0";
   host.style.left = "0";
-  host.style.width = "100%";
-  host.style.height = "100%";
+  host.style.width = "0";
+  host.style.height = "0";
+  host.style.overflow = "visible";
   host.style.zIndex = "999999";
-  host.style.pointerEvents = "none";
   document.body.appendChild(host);
 
   const shadowRoot = host.attachShadow({ mode: "open" });
@@ -74,8 +74,9 @@ async function init(): Promise<void> {
   // Component selector
   const selector = initSelector(shadowRoot, (component) => {
     if (frozen) return;
+    selector.disable();
+    toolbar.setSelectActive(false);
     commentPanel.showPopover(component);
-    inspector.inspect(component);
   });
 
   // Toolbar

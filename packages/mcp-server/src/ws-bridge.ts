@@ -8,7 +8,7 @@ export class WebSocketBridge {
 
   constructor(port: number, session: SessionManager) {
     this.session = session;
-    this.wss = new WebSocketServer({ port });
+    this.wss = new WebSocketServer({ port, host: "0.0.0.0" });
 
     this.wss.on("connection", (ws) => {
       ws.on("message", (raw) => {

@@ -22,7 +22,7 @@ export class WsClient extends EventTarget {
     if (this.closed) return;
 
     try {
-      this.ws = new WebSocket(`ws://localhost:${this.port}`);
+      this.ws = new WebSocket(`ws://${window.location.hostname}:${this.port}`);
     } catch {
       this.scheduleReconnect();
       return;
