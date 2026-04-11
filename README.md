@@ -1,37 +1,101 @@
 # live-design
 
-A browser overlay that lets designers review a running app — comment on components, edit styles and classes, tweak theme variables — then submit structured feedback that an AI coding agent receives via MCP and acts on. No codebase changes required.
+A browser overlay + MCP server that lets a designer review a running React app — pick components, leave comments tied to source lines, and edit the Radix Themes config — then ship the structured review back to a Claude Code agent that applies the changes in code.
 
-## How It Works
+![Toolbar overlay on the example app](./docs/screenshots/01-toolbar.png)
+
+## What's in the loop
 
 ```
         Designer                         Agent (Claude Code)
         --------                         -------------------
 
-    1.                       <--------   agent calls start_session()
-                                          (spawns dev server + proxy)
-    2.  Opens proxy URL
-        Overlay activates    <--------   agent calls wait_for_review()
-    3.  Cmd+click components
-        Add comments
-        Edit styles/classes
-        Tweak theme variables
-    4.  Click "Submit Review"
-        Write high-level feedback
+    1.                       <--------   start_session({ command: "npm run dev" })
+    2.  Opens dev server URL
+        Overlay activates    <--------   wait_for_review()
+    3.  Click Select, pick components,
+        write comments, tweak theme
+    4.  Click Submit Review
     5.  Overlay freezes      -------->   wait_for_review() returns:
                                           - comments (component + file:line)
-                                          - element changes (class/style diffs)
-                                          - theme changes (variable diffs)
+                                          - themeChanges (Radix prop diffs)
                                           - feedback (free text)
     6.                                   Agent edits code...
-    7.  Overlay unfreezes    <--------   agent calls request_feedback("Fixed X")
-    8.  See changes via HMR
-        Review again (go to 3)
+    7.  Overlay unfreezes    <--------   request_feedback("Applied X")
+    8.  HMR shows changes
+        Review again (back to 3)
 ```
 
-## Quick Start (Zero Config)
+## Features
 
-Add the MCP server to Claude Code settings (`~/.claude/settings.json`):
+### Component selector with source-mapped locations
+
+Click **Select**, hover any element, and the overlay walks the React fiber tree to find the component, then parses the JSX `_debugStack` (React 19) and decodes the Vite source map to get the original source line. Comments stick to the exact line in your source file, not the compiled output.
+
+![Component selector highlight](./docs/screenshots/03-select.png)
+
+### Comment popover
+
+Click a highlighted element to open a comment popover. The component name, file path, and line number are baked into the comment payload that the agent receives.
+
+![Comment popover](./docs/screenshots/04-comment.png)
+
+### Radix Themes editor
+
+If the page is wrapped in `<Theme>` (Radix Themes is detected via `[data-is-root-theme="true"]`), the overlay exposes the full prop surface — Appearance, Accent Color, Gray Color, Radius, Scaling, Panel Background, Has Background — as a native control panel. Changes update the data attributes for live preview *and* get sent to the agent so it can edit the `<Theme>` props in source.
+
+![Radix Themes editor panel](./docs/screenshots/02-theme-panel.png)
+
+The Theme button only appears when Radix is detected. You can also extend the panel with custom CSS variables via the `themeVariables` config option.
+
+## Architecture
+
+```
+packages/
+  shared/         Message protocol types (no build step — consumed as raw TS)
+  overlay/        Browser overlay (vanilla TS, shadow DOM, ~2200 LOC)
+  vite-plugin/    Injects overlay into the dev server via transformIndexHtml
+                  + serves overlay dist files via dev server middleware
+  mcp-server/     MCP stdio server + WebSocket bridge on port 24678
+example/          Demo Radix Themes landing page
+```
+
+The overlay communicates with the MCP server via WebSocket on port 24678. The MCP server exposes five tools to Claude Code over stdio.
+
+## Setup
+
+### 1. Build the packages
+
+```bash
+git clone git@github.com:loren-arthur/live-design.git
+cd live-design
+npm install
+npm run build --workspaces
+```
+
+### 2. Add the Vite plugin to your app
+
+```ts
+// vite.config.ts
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { liveDesign } from "@live-design/vite-plugin";
+
+export default defineConfig({
+  plugins: [
+    react(),
+    liveDesign({
+      author: "Designer",
+      // optional — extend the theme panel with custom CSS variables
+      themeVariables: ["--brand-logo", "--my-custom-var"],
+    }),
+  ],
+});
+```
+
+### 3. Register the MCP server with Claude Code
+
+Either as a project-level MCP (`.mcp.json` in the repo root):
 
 ```json
 {
@@ -44,88 +108,26 @@ Add the MCP server to Claude Code settings (`~/.claude/settings.json`):
 }
 ```
 
-Then in any project, the agent calls:
+…or globally via `~/.claude.json`.
 
-```
-start_session({ command: "npm run dev", cwd: "/path/to/project" })
-```
+## MCP tools
 
-This spawns the dev server, detects the port, starts an HTML-injecting proxy, and returns a URL for the designer to open. No npm installs or config changes in the target project.
+| Tool | Description |
+|------|-------------|
+| `start_session` | Spawns a dev server (or targets a running one) and starts a review session. Pass `command` (e.g. `"npm run dev"`) or `target` (URL). |
+| `wait_for_review` | Blocks until the designer submits. Returns comments + theme changes + feedback. |
+| `request_feedback` | After the agent edits code, unfreezes the overlay so the designer can review again. |
+| `get_session_state` | Non-blocking snapshot of the current session. |
+| `stop_session` | Kills the spawned dev server and resets the session. |
 
-### Building from Source
-
-```bash
-cd ~/repo/live-design
-npm install
-npm run build --workspaces
-```
-
-### Running the Example
+## Try the example
 
 ```bash
-cd example
-npm run dev
-# Open http://localhost:5173
+npm run dev --workspace=example
+# open http://localhost:5173
 ```
 
-## MCP Tools
-
-### `start_session`
-
-Starts the proxy and review session. Provide either `target` (URL of a running dev server) or `command` (shell command to start one — URL auto-detected from stdout).
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `target` | string | one of target/command | URL of running dev server |
-| `command` | string | one of target/command | Shell command to start dev server |
-| `cwd` | string | no | Working directory for command |
-| `port` | number | no | Proxy port (default 24680) |
-| `author` | string | no | Default comment author name |
-| `theme_variables` | string[] | no | CSS variables to expose in theme panel |
-
-### `wait_for_review`
-
-Blocks until the designer submits a review. Returns comments (with component source locations), element changes (class/style diffs), theme variable changes, and free-text feedback.
-
-### `request_feedback`
-
-Called after the agent makes code changes. Unfreezes the overlay so the designer can review. The agent should call `wait_for_review` again to get the next round.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `message` | string | yes | What changed, shown to the designer |
-| `resolved_comments` | string[] | no | Comment IDs the agent addressed |
-
-### `get_session_state`
-
-Returns current session state without blocking.
-
-### `stop_session`
-
-Stops the proxy, kills the spawned dev server, resets the session.
-
-## Overlay Features
-
-- **Component selector** — Cmd/Ctrl+click any element to see its React component name and source location
-- **Comment system** — pin comments to specific components with file:line attribution
-- **Element inspector** — edit classes (add/remove from indexed stylesheet classes) and computed styles (color pickers, sliders) with live preview
-- **Theme panel** — live-edit CSS custom properties with instant visual feedback
-- **Submit/freeze flow** — submit review with feedback, overlay freezes until agent calls `request_feedback`
-
-## Architecture
-
-```
-packages/
-  shared/          Message protocol types (comments, element changes, theme, sessions)
-  overlay/         Browser overlay (shadow DOM, vanilla TS, ~2400 LOC)
-  vite-plugin/     Optional Vite plugin for deep integration (alternative to proxy)
-  mcp-server/      MCP stdio server + WebSocket bridge + HTML-injecting proxy
-example/           Demo landing page app
-```
-
-**Zero-config path**: MCP server spawns dev server → starts proxy → injects overlay into HTML responses → WebSocket connects overlay to MCP → Claude Code receives structured reviews.
-
-**Vite plugin path** (optional): For projects that want the overlay baked into their dev server config instead of using the proxy.
+The example is a small Radix Themes landing page. With the MCP server registered, the agent can call `start_session` against it and walk through the full review loop.
 
 ## License
 
