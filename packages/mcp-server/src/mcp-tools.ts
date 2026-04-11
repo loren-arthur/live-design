@@ -234,4 +234,92 @@ export function registerTools(
       };
     },
   );
+
+  mcp.tool(
+    "get_dom_snapshot",
+    "Captures the current DOM of the page from the connected designer's browser. " +
+      "Returns the outerHTML of <html>, the page URL, and viewport dimensions. " +
+      "The live-design overlay element is stripped from the snapshot. Useful for " +
+      "verifying changes landed or finding elements before editing source.",
+    {},
+    async () => {
+      try {
+        const result = await bridge.requestDomSnapshot();
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(
+                {
+                  url: result.url,
+                  viewport: result.viewport,
+                  html: result.html,
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        };
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${err instanceof Error ? err.message : String(err)}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  mcp.tool(
+    "get_screenshot",
+    "Captures a PNG screenshot of the current page from the connected designer's " +
+      "browser using html2canvas. Returns an image content block. The live-design " +
+      "overlay is hidden during capture. Useful when you need to see what the " +
+      "designer is actually looking at, including their viewport, theme, and font " +
+      "rendering.",
+    {},
+    async () => {
+      try {
+        const dataUrl = await bridge.requestScreenshot();
+        // Strip "data:image/png;base64," prefix
+        const match = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (!match) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: invalid data URL returned from browser",
+              },
+            ],
+            isError: true,
+          };
+        }
+        const [, mimeType, data] = match;
+        return {
+          content: [
+            {
+              type: "image" as const,
+              data,
+              mimeType,
+            },
+          ],
+        };
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${err instanceof Error ? err.message : String(err)}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
 }

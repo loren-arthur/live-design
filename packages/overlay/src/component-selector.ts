@@ -36,6 +36,31 @@ const STACK_FRAME_RE = /at\s+(\S+)\s+\((https?:\/\/.+?):(\d+):(\d+)\)/;
 // Also match anonymous frames: "    at http://localhost:5173/src/components/Features.tsx:152:29"
 const STACK_FRAME_ANON_RE = /at\s+(https?:\/\/.+?):(\d+):(\d+)/;
 
+// Find the first meaningful (non-helper) frame in a stack trace.
+// Returns { name, isLibrary } where isLibrary = the frame is in node_modules.
+function extractLeafFrame(stack: string): { name: string; isLibrary: boolean } | null {
+  for (const line of stack.split("\n")) {
+    const m = line.match(STACK_FRAME_RE);
+    if (!m) continue;
+    const name = m[1];
+    const url = m[2];
+    if (
+      name.startsWith("exports.") ||
+      name.startsWith("Object.") ||
+      name === "renderWithHooks" ||
+      name === "renderWithHooksAgain" ||
+      name === "react_stack_bottom_frame" ||
+      name === "Array.map" ||
+      name === "<anonymous>"
+    ) continue;
+    // Skip Radix internal slot/wrapper components — they're implementation detail
+    const cleanName = name.split(".")[0];
+    if (cleanName === "Slot" || cleanName === "Slottable") continue;
+    return { name: cleanName, isLibrary: url.includes("/node_modules/") };
+  }
+  return null;
+}
+
 // ── Minimal VLQ source-map line decoder ──
 const VLQ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 function decodeVLQ(encoded: string): number[] {
@@ -190,33 +215,47 @@ async function findComponentFiber(fiber: FiberNode): Promise<ComponentInfo | nul
     current = current.return;
   }
 
-  // React 19+: _debugSource is gone. Use the clicked element's own _debugStack
-  // for file/line (where the element is defined), and walk up for the component name.
-  const elementSource = fiber._debugStack?.stack
-    ? await parseStackSource(fiber._debugStack.stack)
-    : null;
+  // React 19+: _debugSource is gone. Walk fibers from leaf, collecting
+  // library-leaf names from each fiber's stack. The OUTERMOST library name
+  // (closest to user source) is the user-meaningful component name.
+  // For h1 inside Radix's Heading: leaf=h1, walk hits "Heading" → use it.
+  // For <a> inside Button asChild: leaf=a, walk hits "Slot" (skipped), then
+  //   "BaseButton" (skipped via heuristic? no), then "Button" → use it.
+  let lastLibraryName: string | null = null;
+  let elementSource: { name: string; file: string; line: number; column: number } | null = null;
+  const MAX_DEPTH = 20;
+  current = fiber;
+  let walkDepth = 0;
+  while (current && walkDepth < MAX_DEPTH) {
+    if (current._debugStack?.stack) {
+      const leaf = extractLeafFrame(current._debugStack.stack);
+      if (leaf) {
+        if (leaf.isLibrary) {
+          lastLibraryName = leaf.name;
+        } else {
+          // First user-source frame — this is where the immediate wrapping
+          // component was instantiated. Record location and stop walking up;
+          // anything beyond would be the parent component's wrapper.
+          const parsed = await parseStackSource(current._debugStack.stack);
+          if (parsed) elementSource = parsed;
+          break;
+        }
+      }
+    }
+    current = current.return;
+    walkDepth++;
+  }
 
   if (!elementSource) return null;
 
-  // Walk up to find the nearest component name
-  let componentName = elementSource.name;
-  current = fiber.return;
-  while (current) {
-    const typeName =
-      (typeof current.type === "object" &&
-        (current.type?.displayName || current.type?.name)) ||
-      current.elementType?.name ||
-      null;
-
-    if (typeName) {
-      componentName = typeName;
-      break;
-    }
-    current = current.return;
-  }
+  // Prefer library name (Radix component), then fiber.type if it's an HTML tag,
+  // then fall back to the user-source function name
+  let name = lastLibraryName;
+  if (!name && typeof fiber.type === "string") name = fiber.type;
+  if (!name) name = elementSource.name;
 
   return {
-    name: componentName,
+    name: name || "Unknown",
     file: elementSource.file,
     line: elementSource.line,
     column: elementSource.column,
@@ -266,10 +305,25 @@ export function initSelector(
     }
   }
 
+  // Find the underlying app element at (x, y), looking past the overlay host
+  // (its shadow children may extend beyond the 0x0 host bounds and intercept
+  // hit-testing from the outside).
+  function elementUnderOverlay(x: number, y: number): HTMLElement | null {
+    let el = document.elementFromPoint(x, y);
+    if (el && el.id === "live-design-overlay") {
+      const host = el as HTMLElement;
+      const prevPe = host.style.pointerEvents;
+      host.style.pointerEvents = "none";
+      el = document.elementFromPoint(x, y);
+      host.style.pointerEvents = prevPe;
+    }
+    return el instanceof HTMLElement ? el : null;
+  }
+
   async function handleMouseMove(e: MouseEvent): Promise<void> {
     if (!active) return;
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    if (!el || !(el instanceof HTMLElement)) {
+    const el = elementUnderOverlay(e.clientX, e.clientY);
+    if (!el) {
       hideOverlays();
       return;
     }
@@ -314,8 +368,8 @@ export function initSelector(
     e.preventDefault();
     e.stopPropagation();
 
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    if (!el || !(el instanceof HTMLElement)) return;
+    const el = elementUnderOverlay(e.clientX, e.clientY);
+    if (!el) return;
 
     const fiber = getFiberFromElement(el);
     if (!fiber) return;

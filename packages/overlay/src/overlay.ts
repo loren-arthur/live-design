@@ -8,6 +8,9 @@ import { createThemePanel, findRadixRoot } from "./theme-panel.js";
 import { createToolbar } from "./toolbar.js";
 import { createSubmitDialog } from "./submit-dialog.js";
 import { createFreezeController } from "./freeze.js";
+import { captureDom, captureScreenshot } from "./capture.js";
+
+const OVERLAY_HOST_ID = "live-design-overlay";
 
 async function loadConfig(): Promise<LiveDesignConfig> {
   try {
@@ -28,7 +31,7 @@ async function init(): Promise<void> {
 
   // Create shadow DOM host
   const host = document.createElement("div");
-  host.id = "live-design-overlay";
+  host.id = OVERLAY_HOST_ID;
   host.style.position = "fixed";
   host.style.top = "0";
   host.style.left = "0";
@@ -126,6 +129,34 @@ async function init(): Promise<void> {
 
   ws.on("comment:removed", (msg) => {
     commentPanel.removeComment(msg.commentId);
+  });
+
+  ws.on("dom:request", (msg) => {
+    const snapshot = captureDom(OVERLAY_HOST_ID);
+    ws.send({
+      type: "dom:snapshot",
+      requestId: msg.requestId,
+      html: snapshot.html,
+      url: snapshot.url,
+      viewport: snapshot.viewport,
+    });
+  });
+
+  ws.on("screenshot:request", async (msg) => {
+    try {
+      const dataUrl = await captureScreenshot(OVERLAY_HOST_ID);
+      ws.send({
+        type: "screenshot:result",
+        requestId: msg.requestId,
+        dataUrl,
+      });
+    } catch (err) {
+      ws.send({
+        type: "screenshot:error",
+        requestId: msg.requestId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   });
 
   // ── Keyboard shortcuts ──

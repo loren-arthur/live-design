@@ -45,7 +45,10 @@ export type BrowserMessage =
   | { type: "theme:change"; variable: string; value: string }
   | { type: "theme:reset" }
   | { type: "review:submit"; feedback: string; author: string }
-  | { type: "session:ping" };
+  | { type: "session:ping" }
+  | { type: "dom:snapshot"; requestId: string; html: string; url: string; viewport: { width: number; height: number } }
+  | { type: "screenshot:result"; requestId: string; dataUrl: string }
+  | { type: "screenshot:error"; requestId: string; error: string };
 
 // ── WebSocket messages: Server → Browser ──
 
@@ -57,7 +60,9 @@ export type ServerMessage =
   | { type: "theme:applied"; variable: string; value: string }
   | { type: "theme:cleared" }
   | { type: "review:received" }
-  | { type: "feedback:requested"; message: string };
+  | { type: "feedback:requested"; message: string }
+  | { type: "dom:request"; requestId: string }
+  | { type: "screenshot:request"; requestId: string };
 
 // ── MCP tool return types ──
 
