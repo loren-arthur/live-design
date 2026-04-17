@@ -57,6 +57,8 @@ packages/
   vite-plugin/    Injects overlay into the dev server via transformIndexHtml
                   + serves overlay dist files via dev server middleware
   mcp-server/     MCP stdio server + WebSocket bridge on port 24678
+skills/
+  live-design/    Claude Code skill that drives the review loop via the MCP tools
 example/          Demo Radix Themes landing page
 ```
 
@@ -109,6 +111,24 @@ Either as a project-level MCP (`.mcp.json` in the repo root):
 ```
 
 …or globally via `~/.claude.json`.
+
+### 4. Install the Claude Code skill (optional but recommended)
+
+A skill at [`skills/live-design/SKILL.md`](./skills/live-design/SKILL.md) teaches Claude Code how to drive the review loop — when to call each MCP tool, how to map comments back to source files, and the common pitfalls to avoid.
+
+Copy or symlink it into your Claude Code skills directory:
+
+```bash
+# User-level (available in every project)
+mkdir -p ~/.claude/skills
+ln -s "$(pwd)/skills/live-design" ~/.claude/skills/live-design
+
+# …or project-level (only for this repo)
+mkdir -p .claude/skills
+ln -s ../../skills/live-design .claude/skills/live-design
+```
+
+Prefer `ln -s` over `cp -r` so the skill stays in sync as this repo updates. Once installed, Claude Code will pick it up automatically when the user asks to start a design review.
 
 ## MCP tools
 
