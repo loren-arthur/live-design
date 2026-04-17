@@ -130,6 +130,19 @@ ln -s ../../skills/live-design .claude/skills/live-design
 
 Prefer `ln -s` over `cp -r` so the skill stays in sync as this repo updates. Once installed, Claude Code will pick it up automatically when the user asks to start a design review.
 
+## For the designer
+
+Once setup is done (by a developer, one time), the per-review flow is:
+
+1. Type `/live-design` in Claude Code.
+2. Open the URL it gives you in your browser.
+3. Click **Select**, pick components, leave comments, tweak the theme.
+4. Click **Submit Review**.
+5. Wait a moment — the agent edits the code and the page reloads.
+6. Review again. Repeat until it looks right.
+
+That's the whole loop. You don't need to run commands or touch Claude Code again until you want to start a new review.
+
 ## MCP tools
 
 | Tool | Description |
