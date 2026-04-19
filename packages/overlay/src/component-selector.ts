@@ -4,6 +4,10 @@ export interface SelectedComponent {
   file: string;
   line: number;
   column?: number;
+  /** Serialized React props of the component */
+  props?: Record<string, unknown>;
+  /** Ancestor component names from nearest to root */
+  componentTree?: string[];
 }
 
 interface FiberNode {
@@ -11,7 +15,79 @@ interface FiberNode {
   _debugStack?: { stack?: string };
   type?: { displayName?: string; name?: string } | string;
   elementType?: { name?: string };
+  memoizedProps?: Record<string, unknown>;
   return?: FiberNode | null;
+}
+
+// ── React prop serialization (like DevTools) ──
+
+function serializeProps(
+  props: Record<string, unknown>,
+  depth = 0,
+  seen = new WeakSet<object>(),
+): Record<string, unknown> {
+  if (depth > 3) return { "...": "truncated" };
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(props)) {
+    // Keep children only when it's a plain string (e.g. <Button>Open</Button>)
+    if (key === "children" && typeof val !== "string") continue;
+    result[key] = serializeValue(val, depth, seen);
+  }
+  return result;
+}
+
+function serializeValue(val: unknown, depth: number, seen: WeakSet<object>): unknown {
+  if (val === null || val === undefined) return val;
+  if (typeof val === "function") return "[Function]";
+  if (typeof val === "symbol") return val.toString();
+  if (typeof val !== "object") {
+    // Truncate long strings
+    if (typeof val === "string" && val.length > 200) return val.slice(0, 200) + "…";
+    return val;
+  }
+  // React element check ($$typeof is a Symbol for react.element)
+  if ((val as Record<string, unknown>).$$typeof) {
+    const elType = (val as Record<string, unknown>).type;
+    const name =
+      typeof elType === "function"
+        ? (elType as { displayName?: string; name?: string }).displayName ||
+          (elType as { name?: string }).name ||
+          "Component"
+        : typeof elType === "string"
+          ? elType
+          : "Element";
+    return `[ReactElement: ${name}]`;
+  }
+  if (seen.has(val as object)) return "[Circular]";
+  seen.add(val as object);
+  if (Array.isArray(val)) {
+    const items = val.slice(0, 10).map((v) => serializeValue(v, depth + 1, seen));
+    if (val.length > 10) items.push(`... ${val.length - 10} more`);
+    return items;
+  }
+  return serializeProps(val as Record<string, unknown>, depth + 1, seen);
+}
+
+// ── Component tree extraction ──
+
+function getComponentTree(fiber: FiberNode): string[] {
+  const tree: string[] = [];
+  let current: FiberNode | null | undefined = fiber.return;
+  const MAX = 20;
+  while (current && tree.length < MAX) {
+    const name = getFiberComponentName(current);
+    if (name) tree.push(name);
+    current = current.return;
+  }
+  return tree.reverse(); // root → leaf order
+}
+
+function getFiberComponentName(fiber: FiberNode): string | null {
+  if (typeof fiber.type === "object" && fiber.type) {
+    return fiber.type.displayName || fiber.type.name || null;
+  }
+  if (fiber.elementType?.name) return fiber.elementType.name;
+  return null;
 }
 
 interface ComponentInfo {
@@ -377,12 +453,20 @@ export function initSelector(
     const info = await findComponentFiber(fiber);
     if (!info) return;
 
+    // Extract React props and component tree from the fiber
+    const props = fiber.memoizedProps
+      ? serializeProps(fiber.memoizedProps)
+      : undefined;
+    const componentTree = getComponentTree(fiber);
+
     onSelect({
       element: el,
       component: info.name,
       file: info.file,
       line: info.line,
       column: info.column,
+      props,
+      componentTree,
     });
 
     hideOverlays();

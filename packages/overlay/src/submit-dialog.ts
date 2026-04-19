@@ -1,4 +1,5 @@
 import type { WsClient } from "./ws-client.js";
+import { drainConsoleLogs } from "./console-collector.js";
 
 export interface SubmitDialog {
   open(commentCount: number, themeChangeCount: number): void;
@@ -82,6 +83,7 @@ export function createSubmitDialog(
         type: "review:submit",
         feedback,
         author: reviewAuthor,
+        consoleLogs: drainConsoleLogs(),
       });
 
       close();

@@ -9,6 +9,7 @@ import { createToolbar } from "./toolbar.js";
 import { createSubmitDialog } from "./submit-dialog.js";
 import { createFreezeController } from "./freeze.js";
 import { captureDom, captureScreenshot } from "./capture.js";
+import { initConsoleCollector } from "./console-collector.js";
 
 const OVERLAY_HOST_ID = "live-design-overlay";
 
@@ -25,6 +26,9 @@ async function loadConfig(): Promise<LiveDesignConfig> {
 }
 
 async function init(): Promise<void> {
+  // Start collecting console errors/warnings as early as possible
+  initConsoleCollector();
+
   const config = await loadConfig();
   const port = config.port ?? DEFAULT_PORT;
   const author = config.author ?? "Reviewer";

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type {
   ReviewSession,
   Comment,
+  ConsoleEntry,
   ReviewResult,
   SessionState,
 } from "@live-design/shared";
@@ -83,7 +84,7 @@ export class SessionManager {
     this.session.themeChanges = [];
   }
 
-  submitReview(feedback: string, author: string): ReviewResult | null {
+  submitReview(feedback: string, author: string, consoleLogs: ConsoleEntry[] = []): ReviewResult | null {
     if (!this.session) return null;
 
     this.session.state = "frozen";
@@ -95,6 +96,7 @@ export class SessionManager {
       sessionId: this.session.id,
       comments: [...this.session.comments],
       themeChanges: [...this.session.themeChanges],
+      consoleLogs,
       feedback,
       author,
       submittedAt: this.session.submittedAt,
@@ -143,6 +145,7 @@ export class SessionManager {
         sessionId: this.session!.id,
         comments: [...this.session!.comments],
         themeChanges: [...this.session!.themeChanges],
+        consoleLogs: [],
         feedback: this.session!.feedback,
         author: this.lastAuthor,
         submittedAt: this.session!.submittedAt,

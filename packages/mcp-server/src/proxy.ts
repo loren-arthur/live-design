@@ -12,6 +12,7 @@ export function spawnDevServer(
       shell: true,
       cwd,
       stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, LIVE_DESIGN: "1" },
     });
 
     let resolved = false;

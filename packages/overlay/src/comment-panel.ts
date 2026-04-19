@@ -14,6 +14,24 @@ export interface CommentPanel {
   setEnabled(enabled: boolean): void;
 }
 
+/** Build outer HTML with only direct children — deep descendants replaced with "…" */
+function shallowOuterHtml(el: HTMLElement): string {
+  const clone = el.cloneNode(false) as HTMLElement;
+  for (const child of el.childNodes) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      clone.appendChild(document.createTextNode(child.textContent || ""));
+    } else if (child.nodeType === Node.ELEMENT_NODE) {
+      const childEl = child as HTMLElement;
+      const stub = childEl.cloneNode(false) as HTMLElement;
+      if (childEl.childNodes.length > 0) {
+        stub.appendChild(document.createTextNode("…"));
+      }
+      clone.appendChild(stub);
+    }
+  }
+  return clone.outerHTML;
+}
+
 export function createCommentPanel(
   shadowRoot: ShadowRoot,
   ws: WsClient,
@@ -165,6 +183,31 @@ export function createCommentPanel(
     addBtn.addEventListener("click", () => {
       const text = textarea.value.trim();
       if (!text) return;
+      // Build CSS selector for the DOM element
+      const el = component.element;
+      let selector = el.tagName.toLowerCase();
+      if (el.id) selector += `#${el.id}`;
+      if (el.className && typeof el.className === "string") {
+        selector += el.className
+          .trim()
+          .split(/\s+/)
+          .map((c) => `.${c}`)
+          .join("");
+      }
+
+      // Shallow clone: element + direct children only (no deep nesting)
+      const elementHtml = shallowOuterHtml(el);
+
+      const componentContext =
+        component.props || component.componentTree
+          ? {
+              props: component.props || {},
+              elementHtml,
+              componentTree: component.componentTree || [],
+              selector,
+            }
+          : undefined;
+
       ws.send({
         type: "comment:add",
         comment: {
@@ -174,6 +217,7 @@ export function createCommentPanel(
             line: component.line,
             column: component.column,
           },
+          ...(componentContext && { componentContext }),
           text,
           author,
         },

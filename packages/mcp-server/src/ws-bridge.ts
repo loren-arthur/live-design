@@ -70,7 +70,7 @@ export class WebSocketBridge {
       }
 
       case "review:submit": {
-        const result = this.session.submitReview(msg.feedback, msg.author);
+        const result = this.session.submitReview(msg.feedback, msg.author, msg.consoleLogs);
         if (result) {
           this.broadcast({ type: "session:state", state: "frozen" });
           this.broadcast({ type: "review:received" });

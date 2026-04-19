@@ -21,11 +21,31 @@ export interface SourceLocation {
   component: string;
 }
 
+export interface ComponentContext {
+  /** React props of the target component (functions → "[Function]", elements → "[ReactElement]") */
+  props: Record<string, unknown>;
+  /** Shallow HTML snapshot of the DOM element (element + direct children, no deep nesting) */
+  elementHtml: string;
+  /** Ancestor component names from root, e.g. ["App", "Layout", "Header", "Button"] */
+  componentTree: string[];
+  /** CSS selector identifying the DOM element */
+  selector: string;
+}
+
 export interface Comment {
   id: string;
   location: SourceLocation;
+  componentContext?: ComponentContext;
   text: string;
   author: string;
+  timestamp: number;
+}
+
+// ── Console logs ──
+
+export interface ConsoleEntry {
+  level: "error" | "warn";
+  message: string;
   timestamp: number;
 }
 
@@ -44,7 +64,7 @@ export type BrowserMessage =
   | { type: "comment:remove"; commentId: string }
   | { type: "theme:change"; variable: string; value: string }
   | { type: "theme:reset" }
-  | { type: "review:submit"; feedback: string; author: string }
+  | { type: "review:submit"; feedback: string; author: string; consoleLogs: ConsoleEntry[] }
   | { type: "session:ping" }
   | { type: "dom:snapshot"; requestId: string; html: string; url: string; viewport: { width: number; height: number } }
   | { type: "screenshot:result"; requestId: string; dataUrl: string }
@@ -70,6 +90,7 @@ export interface ReviewResult {
   sessionId: string;
   comments: Comment[];
   themeChanges: ThemeChange[];
+  consoleLogs: ConsoleEntry[];
   feedback: string;
   author: string;
   submittedAt: number;
